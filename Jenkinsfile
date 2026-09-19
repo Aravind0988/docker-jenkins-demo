@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
         IMAGE_NAME = "irfaanpk/test-jenkins"
     }
 
@@ -16,38 +15,36 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    bat """
-                    docker build -t ${IMAGE_NAME}:latest .
-                    """
-                }
+                bat 'docker build -t %IMAGE_NAME%:latest .'
             }
         }
 
         stage('Login to Docker Hub') {
             steps {
-                script {
-                    bat """
-                    echo %DOCKERHUB_CREDENTIALS_PSW% | docker login -u %DOCKERHUB_CREDENTIALS_USR% --password-stdin
-                    """
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )
+                ]) {
+                    bat '''
+                        echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
+                    '''
                 }
             }
         }
 
         stage('Push Image to Docker Hub') {
             steps {
-                script {
-                    bat """
-                    docker push ${IMAGE_NAME}:latest
-                    """
-                }
+                bat 'docker push %IMAGE_NAME%:latest'
             }
         }
     }
 
     post {
         always {
-            bat "docker logout"
+            bat 'docker logout'
         }
     }
 }
